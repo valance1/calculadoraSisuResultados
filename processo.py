@@ -1,6 +1,8 @@
 import pandas as pd
+import openpyxl
+from openpyxl.styles import Font, Alignment
 
-df = pd.read_excel('ufv.xlsx', header=None)
+df = pd.read_excel('template.xlsx', header=None)
 
 Notas_dict = {}
 ids = df.iloc[0, 1:]  # Assuming IDs are in the first row, starting from the second column
@@ -97,7 +99,38 @@ chamada_regular_df.drop(chamada_regular_df.columns[1], axis=1, inplace=True)
 # Create a DataFrame for waiting list
 lista_de_espera_df = pd.DataFrame(lista_de_espera, columns=['Nota', 'ID'])
 
-# Write to Excel
-with pd.ExcelWriter('results.xlsx') as writer:
-    chamada_regular_df.to_excel(writer, sheet_name='Chamda Regular', index=False)
-    lista_de_espera_df.to_excel(writer, sheet_name='Lista de Espera', index=False)
+wb = openpyxl.load_workbook('results.xlsx')
+chamada_regular_sheet = wb['Chamada Regular']
+lista_de_espera_sheet = wb['Lista de Espera']
+
+# Add titles
+chamada_regular_sheet.insert_rows(1)
+chamada_regular_sheet['A1'] = 'Chamada Regular'
+chamada_regular_sheet['A1'].font = Font(size=14, bold=True)
+chamada_regular_sheet['A1'].alignment = Alignment(horizontal='center')
+chamada_regular_sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=chamada_regular_sheet.max_column)
+
+lista_de_espera_sheet.insert_rows(1)
+lista_de_espera_sheet['A1'] = 'Lista de Espera'
+lista_de_espera_sheet['A1'].font = Font(size=14, bold=True)
+lista_de_espera_sheet['A1'].alignment = Alignment(horizontal='center')
+lista_de_espera_sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=lista_de_espera_sheet.max_column)
+
+# Adjust column widths
+for sheet in [chamada_regular_sheet, lista_de_espera_sheet]:
+    for col in sheet.columns:
+        max_length = 0
+        if isinstance(col[0], openpyxl.cell.cell.MergedCell):
+            continue
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(cell.value)
+            except:
+                pass
+        adjusted_width = (max_length + 2)
+        sheet.column_dimensions[column].width = adjusted_width
+
+# Save the workbook
+wb.save('results.xlsx')
